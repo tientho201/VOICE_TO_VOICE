@@ -21,4 +21,4 @@ Cấu trúc đề xuất cho đề tài **Voice-to-Voice** gồm `backend/` (API
 
 ### Gợi ý tiếp theo
 
-- Nếu bạn muốn: mình có thể dựng sẵn **backend FastAPI** (REST + WebSocket streaming audio) và **frontend (Next.js/Vite)**, kèm ví dụ luồng: record → gửi chunk → nhận audio trả về → phát realtime.
+- Mình sẽ dựng sẵn **backend FastAPI** (REST + WebSocket streaming audio) và **frontend (Streamlit)**, kèm ví dụ luồng: record → gửi chunk → nhận audio trả về → phát realtime.

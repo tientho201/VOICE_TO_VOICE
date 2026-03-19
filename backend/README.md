@@ -16,11 +16,10 @@ Tại thư mục `backend/`:
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+fastapi run .\backend\app\main.py
 ```
 
 Test nhanh:
 
 - `GET /health`
 - `POST /v1/v2v` (form-data key `file`)
-

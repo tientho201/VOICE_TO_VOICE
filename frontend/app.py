@@ -20,12 +20,36 @@ st.markdown("""
     .st-emotion-cache-11v6ept{
         font-size: 1rem;
     }
+    /* Khóa cuộn cho thẻ html và body 
+    /*html, body {    */
+    /*    overflow: hidden !important;    */
+    /*}*/
+    
+    /* Khóa cuộn cho container chính của Streamlit */
+    /*[data-testid="stAppViewContainer"], */
+    /*[data-testid="stMainBlockContainer"] {*/
+    /*    overflow: hidden !important;*/
+    /*}*/
 </style>
 """, unsafe_allow_html=True)
 
 # Khởi tạo state
 if "chat_counter" not in st.session_state:
     st.session_state.chat_counter = 1 # Bắt đầu đếm từ 1
+
+# --- KHỞI TẠO STATE ---
+# Biến kiểm tra xem đã clone giọng thành công chưa (mặc định là False)
+if "is_voice_cloned" not in st.session_state:
+    st.session_state.is_voice_cloned = False
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+    
+if "mic_key" not in st.session_state:
+    st.session_state.mic_key = str(uuid.uuid4())
+
+if "is_send_voice" not in st.session_state:
+    st.session_state.is_send_voice = False
 
 # Khởi tạo state
 if "chats" not in st.session_state:
@@ -52,12 +76,12 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
     
-    st.image("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsuVEyccK0aMsEtY6SIeOCAs9GS_NRT8q0yQ&s", width="stretch")
+    st.image("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsuVEyccK0aMsEtY6SIeOCAs9GS_NRT8q0yQ&s", width="content")
     st.divider()
    
-    st.title("📂 Danh sách Chat")
+    st.title("📂 List Chat")
     
-    if st.button("➕ Cuộc trò chuyện mới"):
+    if st.button("➕ New Chat"):
         st.session_state.chat_counter += 1
         new_id = str(uuid.uuid4())
         st.session_state.chats[new_id] = {
@@ -124,83 +148,178 @@ with st.sidebar:
     api_key = st.text_input("API Key", type="password")
     
     if api_key:
-        st.success("API Key đã được cấu hình")
+        st.success("API Key configured")
     else:
-        st.error("Vui lòng cấu hình API Key")
+        st.error("Please configure API Key")
     
-col1, col2 = st.columns([2, 1], gap="xlarge")
+col1, col2 = st.columns([1, 1], gap="xlarge")
 
 with col2:
-    if st.button("Health check"):
-        try:
-            r = requests.get(f"{BACKEND_URL}/health", timeout=10)
-            st.success(r.json())
-        except Exception as e:
-            st.error(str(e))
-    # 1. Khởi tạo bộ nhớ tạm thời cho Chat (Dùng xong tắt trình duyệt là mất)
+    st.subheader("🎙️ Live Talk")
+    
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
-    # 2. Hiển thị lịch sử trò chuyện
+    
+    # 1. TẠO KHUNG CHAT CỐ ĐỊNH (Cuộn được, đẩy mic xuống dưới)
+    # Chỉnh height cho phù hợp với màn hình của bạn
+    chat_container = st.container(height=500)
+    
+    # Vẽ lịch sử chat vào trong khung
+    with chat_container:
+        if not st.session_state.chat_history:
+            st.info("Start the conversation by recording your voice!")
+        for i, msg in enumerate(st.session_state.chat_history):
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["text"])
+                if msg.get("audio"):
+                    # Chỉ tự động phát (autoplay) âm thanh CỦA AI và MỚI NHẤT
+                    is_last_msg = (i == len(st.session_state.chat_history) - 1)
+                    should_autoplay = is_last_msg and msg["role"] == "assistant"
+                    
+                    st.audio(msg["audio"], autoplay=should_autoplay)
+    
     st.divider()
-    st.subheader("💬 Cuộc trò chuyện")
-    for msg in st.session_state.chat_history:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["text"])
-            if msg.get("audio"):
-                st.audio(msg["audio"])
-
-with col1:
-    st.subheader("Upload hoặc Record audio")
-
-    uploaded = st.file_uploader("Upload audio", type=["wav", "mp3", "m4a", "ogg", "flac"])
-    recorded = st.audio_input("Record audio", sample_rate=48000)
-
-    audio_file = recorded or uploaded
-
-    if audio_file is not None:
-        st.audio(audio_file)
-
-        if st.button("Send Voice" , use_container_width=True):
-            # Thêm tin nhắn của User vào lịch sử hiển thị ngay lập tức
-            st.session_state.chat_history.append({
-                "role": "user", 
-                "text": "🎤 *Bạn vừa gửi một tin nhắn thoại...*", 
-                "audio": audio_file.getvalue()
-            })
+    
+    # Cảnh báo cho người dùng biết tại sao mic bị mờ
+    if not st.session_state.is_voice_cloned:
+        st.warning("⚠️ Please complete the Voice Cloning step in the left column to start the conversation.")
+    
+    # 2. KHỞI TẠO KEY ĐỘNG CHO MIC
+    # Streamlit có một nhược điểm: khi ghi âm xong, file audio sẽ nằm kẹt ở widget đó.
+    # Ta phải dùng một key thay đổi liên tục để "ép" cái mic reset lại sau mỗi lần gửi.
+    if "mic_key" not in st.session_state:
+        st.session_state.mic_key = str(uuid.uuid4())
+    
+    # Mic ghi âm giờ đã bị đẩy xuống dưới cùng
+    recorded_speech = st.audio_input(
+        "Press to speak", 
+        sample_rate=48000, 
+        key=st.session_state.mic_key,
+        disabled= not st.session_state.is_voice_cloned
+    )
+    
+    # 3. VÒNG LẶP XỬ LÝ LIVE (Khi có người dùng nói)
+    if recorded_speech and st.session_state.is_voice_cloned:
+        audio_bytes = recorded_speech.getvalue()
+        # A. Lưu lời của bạn vào lịch sử
+        st.session_state.chat_history.append({
+            "role": "user",
+            "text": "🎤 *You just sent a voice message...*",
+            "audio": audio_bytes
+        })
+        # B. Ép Streamlit vẽ ngay lời của bạn và hiệu ứng "AI đang suy nghĩ" ra màn hình 
+        # (Không chờ gọi API xong mới vẽ, như vậy mới ra chất Live)
+        with chat_container:
+            with st.chat_message("user"):
+                st.markdown("🎤 *You just sent a voice message...*")
+                st.audio(audio_bytes)
             
-            files = {
-                "file": (
-                    getattr(audio_file, "name", "recorded.wav"),
-                    audio_file.getvalue(),
-                    getattr(audio_file, "type", "audio/wav"),
-                )
-            }
-            # Vừa hiện hiệu ứng xoay xoay vừa gọi API
-            with st.spinner("Thinking..."):
-                try:
-                    r = requests.post(f"{BACKEND_URL}/v1/v2v", files=files, timeout=60)
-                    r.raise_for_status()
-                    response_data = r.json()
+            with st.chat_message("assistant"):
+                with st.spinner("AI is listening and thinking..."):
                     
-                    # --- PHẦN QUAN TRỌNG: Bóc tách dữ liệu từ Backend ---
-                    # Giả định backend của bạn trả về JSON có dạng: 
-                    # {"text": "Câu trả lời của AI", "audio_base64": "UklGRiQAAABXQVZFZm10IBAA..."}
-                    
-                    ai_text = response_data.get("text", "AI không có câu trả lời bằng chữ.")
-                    ai_audio_b64 = response_data.get("audio_base64", "")
-                    
-                    # Giải mã Base64 thành byte âm thanh để Streamlit đọc được
-                    ai_audio_bytes = base64.b64decode(ai_audio_b64) if ai_audio_b64 else None
-                    
-                    # Lưu câu trả lời của AI vào bộ nhớ
-                    st.session_state.chat_history.append({
-                        "role": "assistant",
-                        "text": ai_text,
-                        "audio": ai_audio_bytes
-                    })
-                    
-                    # Rerun để load lại giao diện và phát âm thanh mới nhất
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"Lỗi kết nối hoặc xử lý: {str(e)}")
+                    # --- GỌI BACKEND V2V CỦA BẠN Ở ĐÂY ---
+                    files = {
+                        "file": ("recorded.wav", audio_bytes, "audio/wav")
+                    }
+                    try:
+                        r = requests.post(f"{BACKEND_URL}/v1/v2v", files=files, timeout=60)
+                        r.raise_for_status()
+                        res = r.json()
+                        
+                        # Bóc tách dữ liệu JSON (Remember to adjust the key to match your API)
+                        ai_text = res.get("text", "AI has processed the audio.")
+                        ai_audio_b64 = res.get("audio_base64", "")
+                        ai_audio_bytes = base64.b64decode(ai_audio_b64) if ai_audio_b64 else None
+                        
+                        # C. Lưu lời của AI vào lịch sử
+                        st.session_state.chat_history.append({
+                            "role": "assistant",
+                            "text": ai_text,
+                            "audio": ai_audio_bytes
+                        })
+                        
+                        # D. BƯỚC QUYẾT ĐỊNH: Đổi key để dọn dẹp cái Mic, sẵn sàng cho câu tiếp theo
+                        st.session_state.mic_key = str(uuid.uuid4())
+                        
+                        # Load lại toàn bộ trang để kích hoạt Autoplay âm thanh của AI
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"Backend connection error: {str(e)}")
+                        # Nếu lỗi cũng phải reset mic để thu âm lại
+                        st.session_state.mic_key = str(uuid.uuid4())
+                        if st.button("Refresh"):
+                            st.rerun()
+with col1:
+    st.subheader("Upload or Record audio")
+
+    # KỊCH BẢN A: ĐÃ CLONE XONG -> Chỉ hiện file audio đã lưu và nút Reset
+    if st.session_state.is_voice_cloned and "ref_audio_bytes" in st.session_state:
+        st.success("✅ Voice cloned successfully!")
+        
+        # Phát lại âm thanh từ bộ nhớ Session State (Không bao giờ bị mất khi rerun)
+        st.audio(st.session_state.ref_audio_bytes)
+        
+        # Nút để người dùng thu âm lại từ đầu nếu muốn đổi giọng
+        if st.button("🔄 Change voice", use_container_width=True):
+            st.session_state.is_voice_cloned = False
+            del st.session_state["ref_audio_bytes"]
+            st.rerun()
+
+    else:
+
+        uploaded = st.file_uploader("Upload audio", type=["wav", "mp3", "m4a", "ogg", "flac"])
+        recorded = st.audio_input("Record audio", sample_rate=48000)
+
+        audio_file = recorded or uploaded
+
+        if audio_file is not None:
+            st.audio(audio_file)
+
+            if st.button("Send Voice" , use_container_width=True):
+                # Thêm tin nhắn của User vào lịch sử hiển thị ngay lập tức
+                # st.session_state.chat_history.append({
+                #     "role": "user", 
+                #     "text": "🎤 *Bạn vừa gửi một tin nhắn thoại...*", 
+                #     "audio": audio_file.getvalue()
+                # })
+                # --- LƯU LẠI AUDIO VÀO SESSION STATE Ở BƯỚC NÀY ---
+                st.session_state.ref_audio_bytes = audio_file.getvalue()
+                files = {
+                    "file": (
+                        getattr(audio_file, "name", "recorded.wav"),
+                        audio_file.getvalue(),
+                        getattr(audio_file, "type", "audio/wav"),
+                    )
+                }
+                # Vừa hiện hiệu ứng xoay xoay vừa gọi API
+                with st.spinner("Thinking..."):
+                    try:
+                        r = requests.post(f"{BACKEND_URL}/v1/v2v", files=files, timeout=60)
+                        r.raise_for_status()
+                        response_data = r.json()
+                        
+                        # --- PHẦN QUAN TRỌNG: Bóc tách dữ liệu từ Backend ---
+                        # Giả định backend của bạn trả về JSON có dạng: 
+                        # {"text": "Câu trả lời của AI", "audio_base64": "UklGRiQAAABXQVZFZm10IBAA..."}
+                        
+                        ai_text = response_data.get("text", "AI không có câu trả lời bằng chữ.")
+                        ai_audio_b64 = response_data.get("audio_base64", "")
+                        
+                        # Giải mã Base64 thành byte âm thanh để Streamlit đọc được
+                        ai_audio_bytes = base64.b64decode(ai_audio_b64) if ai_audio_b64 else None
+                        
+                        # # # Lưu câu trả lời của AI vào bộ nhớ
+                        # st.session_state.chat_history.append({
+                        #     "role": "assistant",
+                        #     "text": ai_text,
+                        #     "audio": ai_audio_bytes
+                        # })
+                        # Giả lập backend mất 2 giây để clone
+                        
+                        # Thành công -> Mở khóa mic bên cột 2
+                        st.session_state.is_voice_cloned = True
+                        st.success("Voice cloned successfully! You can start chatting in the next column.")
+                        st.rerun() # Load lại trang để mic bên col2 hết bị mờ
+                    except Exception as e:
+                        st.error(f"Error connecting or processing: {str(e)}")
