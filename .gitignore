@@ -29,3 +29,5 @@ data/
 uploads/
 
 *.docx
+
+get_started.py
