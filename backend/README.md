@@ -1,36 +1,36 @@
 # Voice-to-Voice Backend
 
-This is the backend service for the Voice-to-Voice project, built with [FastAPI](https://fastapi.tiangolo.com/). It handles audio processing and connects to various AI models to provide STT, LLM, and TTS capabilities.
+Đây là dịch vụ backend cho dự án Voice-to-Voice, được xây dựng bằng [FastAPI](https://fastapi.tiangolo.com/). Dịch vụ này xử lý âm thanh và kết nối với các mô hình AI khác nhau để cung cấp các tính năng STT (Chuyển giọng nói thành văn bản), LLM (Mô hình ngôn ngữ lớn), và TTS (Chuyển văn bản thành giọng nói).
 
-## Architecture
+## Kiến trúc
 
-The backend exposes a REST API to accept audio files and handles the processing via a pipeline:
-1. **STT (Speech-to-Text):** Processed via Groq (`whisper-large-v3-turbo`).
-2. **LLM (Large Language Model):** Powered by OpenAI (`gpt-4o-mini`) to generate conversational responses.
-3. **TTS (Text-to-Speech):** F5-TTS via Replicate API for high fidelity and fast voice cloning generation.
+Backend cung cấp một REST API để tiếp nhận các file âm thanh và xử lý chúng thông qua một pipeline:
+1. **STT (Speech-to-Text):** Xử lý qua Groq (`whisper-large-v3-turbo`).
+2. **LLM (Large Language Model):** Xử lý bởi OpenAI (`gpt-4o-mini`) nhằm tạo ra các câu trả lời tự nhiên dưới dạng đàm thoại.
+3. **TTS (Text-to-Speech):** F5-TTS thông qua Replicate API với chất lượng cao và khả năng trả về giọng nói được clone (sao chép kiểu giọng) một cách nhanh chóng.
 
-## Project Structure
-- `app/api/`: API Routers (`/v2v` endpoint handling file uploads).
-- `app/core/`: Configuration settings for API Keys and variables via `pydantic-settings`.
-- `app/services/`: Integration of specific services (`Groq`, `OpenAI`, `Replicate`, and `v2v_pipeline`).
+## Cấu trúc thư mục
+- `app/api/`: API Routers (Endpoint `/v2v` xử lý tải file lên).
+- `app/core/`: Thiết lập cấu hình cho các cấu hình API và biến môi trường thông qua `pydantic-settings`.
+- `app/services/`: Tích hợp các dịch vụ cụ thể (`Groq`, `OpenAI`, `Replicate`, và `v2v_pipeline`).
 
-## Prerequisites
+## Yêu cầu thiết yếu
 - Python 3.9+
-- Provide the following exact API variables in an `.env` file mapping:
+- Cung cấp các cấu hình API xác thực vào file `.env` theo biến:
   - `GROQ_API_KEY`
   - `OPENAI_API_KEY`
   - `REPLICATE_API_TOKEN`
 
-## Setup & Running
+## Cài đặt & Khởi chạy
 
-1. **Install Dependencies:**
+1. **Cài đặt các thư viện phụ thuộc:**
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Run the server:**
-   Start the FastAPI development server:
+2. **Chạy server:**
+   Khởi động server phát triển FastAPI:
    ```bash
    fastapi dev app/main.py
    ```
-   *The server runs on http://127.0.0.1:8000.*
+   *Server sẽ chạy tại địa chỉ http://127.0.0.1:8000.*

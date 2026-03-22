@@ -1,26 +1,26 @@
 # Voice-to-Voice Frontend
 
-This is the frontend user interface for the Voice-to-Voice project, built with [Streamlit](https://streamlit.io/). It provides a user-friendly conversational interface to interact with the AI assistant through voice and audio playback.
+Đây là giao diện người dùng frontend cho dự án Voice-to-Voice, được xây dựng bằng [Streamlit](https://streamlit.io/). Giao diện này cung cấp trải nghiệm đàm thoại thân thiện nhằm tương tác với trợ lý AI qua giọng nói kèm theo khả năng tự động phát lại âm thanh.
 
-## Features
+## Các tính năng chính
 
-- **Voice Cloning Setup:** Upload or record an audio sample of your voice. The system will securely save it to clone your voice for responses.
-- **Chat Interface:** An interactive chat UI containing user messages and AI text/audio responses.
-- **Live Talk:** Speak into your microphone and immediately get a spoken response back from the AI with an auto-playing audio feature.
-- **LangSmith Tracing:** Includes scripts for tracing and system monitoring utilizing LangChain telemetry.
+- **Thiết lập sao chép giọng nói (Voice Cloning Setup):** Tải lên hoặc trực tiếp thu âm một mẫu giọng nói của bạn. Hệ thống sẽ lưu lại an toàn để sử dụng sao chép giống y hệt chất giọng của bạn cho các phản hồi kế tiếp.
+- **Giao diện Chat:** Giao diện trò chuyện tương tác bao gồm lịch sử tin nhắn của người dùng, văn bản và các file phản hồi âm thanh từ hệ thống AI.
+- **Đàm thoại trực tiếp (Live Talk):** Nói tương tác qua microphone và ngay lập tức nhận lại phản hồi bằng giọng nói từ trợ lý AI với tính năng tự động phát giọng âm cực mượt.
+- **Theo dõi cùng LangSmith:** Tích hợp sẵn mã giám sát, tra soát hệ thống bằng LangChain telemetry.
 
-## Prerequisites
+## Yêu cầu thiết yếu
 - Python 3.9+
 
-## Setup & Running
+## Cài đặt & Khởi chạy
 
-1. **Install Dependencies:**
+1. **Cài đặt các thư viện phụ thuộc:**
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Environment Variables:**
-   A `.env` config file with the following variables is necessary:
+2. **Biến môi trường:**
+   Tạo hoặc cấu hình một file `.env` với các nội dung thiết lập sau:
    ```env
    BACKEND_URL=http://127.0.0.1:8000
    LANGCHAIN_TRACING_V2=true
@@ -29,8 +29,8 @@ This is the frontend user interface for the Voice-to-Voice project, built with [
    OPENAI_API_KEY=your_openai_key
    ```
 
-3. **Run the Application:**
+3. **Chạy ứng dụng:**
    ```bash
    streamlit run app.py
    ```
-   *The UI will launch automatically at http://localhost:8501.*
+   *Giao diện UI sẽ tự động mở tại http://localhost:8501.*
