@@ -5,6 +5,9 @@ import streamlit as st
 import uuid
 import base64
 
+from src.lib import tracking_model
+
+
 st.set_page_config(page_title="Chatbot", page_icon=":robot:", layout="wide")
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
@@ -37,29 +40,19 @@ st.markdown("""
 if "chat_counter" not in st.session_state:
     st.session_state.chat_counter = 1 # Bắt đầu đếm từ 1
 
-# --- KHỞI TẠO STATE ---
-# Biến kiểm tra xem đã clone giọng thành công chưa (mặc định là False)
-if "is_voice_cloned" not in st.session_state:
-    st.session_state.is_voice_cloned = False
-
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-    
-if "mic_key" not in st.session_state:
-    st.session_state.mic_key = str(uuid.uuid4())
-
-if "is_send_voice" not in st.session_state:
-    st.session_state.is_send_voice = False
-
 # Khởi tạo state
 if "chats" not in st.session_state:
     first_id = str(uuid.uuid4())
     st.session_state.chats = {
         first_id: {
             "name": "New Chat",
-            "messages": [],
-            "voice": None,
+            "chat_history": [],
+            "ref_audio_bytes": None,
             "chat_number": st.session_state.chat_counter,
+            "ref_text": tracking_model.create_text_random_voice(),
+            "is_voice_cloned": False,
+            "mic_key": str(uuid.uuid4()),
+            "is_send_voice": False
         }
     }
     st.session_state.active_session = first_id
@@ -86,9 +79,13 @@ with st.sidebar:
         new_id = str(uuid.uuid4())
         st.session_state.chats[new_id] = {
             "name": "New Chat",
-            "messages": [],
-            "voice": None,
+            "chat_history": [],
+            "ref_audio_bytes": None,
             "chat_number": st.session_state.chat_counter,
+            "ref_text": tracking_model.create_text_random_voice(),
+            "is_voice_cloned": False,
+            "mic_key": str(uuid.uuid4()),
+            "is_send_voice": False
         }
         st.session_state.active_session = new_id
         st.rerun()  # Load lại trang
@@ -140,40 +137,74 @@ with st.sidebar:
             
             # Gán session vào index mới và load lại
             st.session_state.active_session = new_keys[nearest_index]
+            
             st.rerun()
 
     st.divider()
 
-    # Cấu hình API Key (Dùng chung cho tất cả)
-    api_key = st.text_input("API Key", type="password")
-    
-    if api_key:
-        st.success("API Key configured")
-    else:
-        st.error("Please configure API Key")
-    
 col1, col2 = st.columns([1, 1], gap="xlarge")
 
+#===============================================
+#                       COL1
+#===============================================
+
+with col1:
+    st.subheader("Upload or Record audio")
+
+    # KỊCH BẢN A: ĐÃ CLONE XONG -> Chỉ hiện file audio đã lưu và nút Reset
+    if st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] and "ref_audio_bytes" in st.session_state.chats[st.session_state.active_session]:
+        st.success("✅ Voice cloned successfully!")
+        
+        # Phát lại âm thanh từ bộ nhớ Session State (Không bao giờ bị mất khi rerun)
+        st.audio(st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"])
+        with st.status("Hãy nói theo nội dung bên dưới để clone giọng nói của bạn"):
+            st.write(st.session_state.chats[st.session_state.active_session]["ref_text"])
+        # Nút để người dùng thu âm lại từ đầu nếu muốn đổi giọng
+        if st.button("🔄 Change voice", use_container_width=True):
+            st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = False
+            del st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"]
+            del st.session_state.chats[st.session_state.active_session]["ref_text"]
+            st.session_state.chats[st.session_state.active_session]["ref_text"] = tracking_model.create_text_random_voice()
+            st.rerun()
+
+    else:
+
+        uploaded = st.file_uploader("Upload audio", type=["wav", "mp3", "m4a", "ogg", "flac"])
+        recorded = st.audio_input("Record audio", sample_rate=48000)
+        audio_file = recorded or uploaded
+
+        with st.status("Hãy nói theo nội dung bên dưới để clone giọng nói của bạn"):
+            st.write(st.session_state.chats[st.session_state.active_session]["ref_text"])
+        if audio_file is not None:
+            # st.audio(audio_file)
+            if st.button("Send Voice" , use_container_width=True):
+                st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"] = audio_file.getvalue()
+                
+                # Thành công -> Mở khóa mic bên cột 2
+                st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = True
+                st.success("Voice cloned successfully! You can start chatting in the next column.")
+                st.rerun() # Load lại trang để mic bên col2 hết bị mờ
+
+
+
 with col2:
+    
     st.subheader("🎙️ Live Talk")
-    
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-    
+
     # 1. TẠO KHUNG CHAT CỐ ĐỊNH (Cuộn được, đẩy mic xuống dưới)
     # Chỉnh height cho phù hợp với màn hình của bạn
     chat_container = st.container(height=500)
     
     # Vẽ lịch sử chat vào trong khung
     with chat_container:
-        if not st.session_state.chat_history:
+        if not st.session_state.chats[st.session_state.active_session]["chat_history"]:
             st.info("Start the conversation by recording your voice!")
-        for i, msg in enumerate(st.session_state.chat_history):
+        for i, msg in enumerate(st.session_state.chats[st.session_state.active_session]["chat_history"]):
             with st.chat_message(msg["role"]):
                 st.markdown(msg["text"])
                 if msg.get("audio"):
                     # Chỉ tự động phát (autoplay) âm thanh CỦA AI và MỚI NHẤT
-                    is_last_msg = (i == len(st.session_state.chat_history) - 1)
+                    is_last_msg = (i == len(st.session_state.chats[st.session_state.active_session]["chat_history"]) - 1)
                     should_autoplay = is_last_msg and msg["role"] == "assistant"
                     
                     st.audio(msg["audio"], autoplay=should_autoplay)
@@ -181,7 +212,7 @@ with col2:
     st.divider()
     
     # Cảnh báo cho người dùng biết tại sao mic bị mờ
-    if not st.session_state.is_voice_cloned:
+    if not st.session_state.chats[st.session_state.active_session]["is_voice_cloned"]:
         st.warning("⚠️ Please complete the Voice Cloning step in the left column to start the conversation.")
     
     # 2. KHỞI TẠO KEY ĐỘNG CHO MIC
@@ -195,18 +226,18 @@ with col2:
         "Press to speak", 
         sample_rate=48000, 
         key=st.session_state.mic_key,
-        disabled= not st.session_state.is_voice_cloned
+        disabled= not st.session_state.chats[st.session_state.active_session]["is_voice_cloned"]
     )
     
     # 3. VÒNG LẶP XỬ LÝ LIVE (Khi có người dùng nói)
-    if recorded_speech and st.session_state.is_voice_cloned:
+    if recorded_speech and st.session_state.chats[st.session_state.active_session]["is_voice_cloned"]:
         audio_bytes = recorded_speech.getvalue()
         # A. Lưu lời của bạn vào lịch sử
-        st.session_state.chat_history.append({
-            "role": "user",
-            "text": "🎤 *You just sent a voice message...*",
-            "audio": audio_bytes
-        })
+        # st.session_state.chat_history.append({
+        #     "role": "user",
+        #     "text": "🎤 *You just sent a voice message...*",
+        #     "audio": audio_bytes
+        # })
         # B. Ép Streamlit vẽ ngay lời của bạn và hiệu ứng "AI đang suy nghĩ" ra màn hình 
         # (Không chờ gọi API xong mới vẽ, như vậy mới ra chất Live)
         with chat_container:
@@ -218,28 +249,38 @@ with col2:
                 with st.spinner("AI is listening and thinking..."):
                     
                     # --- GỌI BACKEND V2V CỦA BẠN Ở ĐÂY ---
+                    # Gửi file thu âm Live
                     files = {
-                        "file": ("recorded.wav", audio_bytes, "audio/wav")
+                        "file": ("recorded.wav", audio_bytes, "audio/wav"),
+                        "ref_text" : st.session_state.ref_text,
+                       
                     }
+                    
+                    # QUAN TRỌNG: Phải gửi kèm file mẫu giọng bên cột Setup để Server Clone đúng chuẩn
+                    if "ref_audio_bytes" in st.session_state.chats[st.session_state.active_session]:
+                        files["ref_audio_file"] = ("ref_audio.wav", st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"], "audio/wav")
+                    
                     try:
-                        r = requests.post(f"{BACKEND_URL}/v1/v2v", files=files, timeout=60)
+                        # Phải gọi `/v2v` thay vì `/v2v/stream` vì đoạn code dưới của bạn đang parse đuôi `.json()` 
+                        # (chứ API stream trả về file bytes thô)
+                        r = requests.post(f"{BACKEND_URL}/v2v", files=files, timeout=60)
                         r.raise_for_status()
                         res = r.json()
                         
-                        # Bóc tách dữ liệu JSON (Remember to adjust the key to match your API)
-                        ai_text = res.get("text", "AI has processed the audio.")
-                        ai_audio_b64 = res.get("audio_base64", "")
+                        # Bóc tách dữ liệu JSON (Cập nhật đúng biến bot_text từ Server gửi về)
+                        ai_text = res.get("bot_text", "AI has processed the audio.")
+                        ai_audio_b64 = res.get("bot_audio_base64", "")
                         ai_audio_bytes = base64.b64decode(ai_audio_b64) if ai_audio_b64 else None
                         
                         # C. Lưu lời của AI vào lịch sử
-                        st.session_state.chat_history.append({
+                        st.session_state.chats[st.session_state.active_session]["chat_history"].append({
                             "role": "assistant",
                             "text": ai_text,
                             "audio": ai_audio_bytes
                         })
                         
                         # D. BƯỚC QUYẾT ĐỊNH: Đổi key để dọn dẹp cái Mic, sẵn sàng cho câu tiếp theo
-                        st.session_state.mic_key = str(uuid.uuid4())
+                        st.session_state.chats[st.session_state.active_session]["mic_key"] = str(uuid.uuid4())
                         
                         # Load lại toàn bộ trang để kích hoạt Autoplay âm thanh của AI
                         st.rerun()
@@ -247,79 +288,6 @@ with col2:
                     except Exception as e:
                         st.error(f"Backend connection error: {str(e)}")
                         # Nếu lỗi cũng phải reset mic để thu âm lại
-                        st.session_state.mic_key = str(uuid.uuid4())
+                        st.session_state.chats[st.session_state.active_session]["mic_key"] = str(uuid.uuid4())
                         if st.button("Refresh"):
                             st.rerun()
-with col1:
-    st.subheader("Upload or Record audio")
-
-    # KỊCH BẢN A: ĐÃ CLONE XONG -> Chỉ hiện file audio đã lưu và nút Reset
-    if st.session_state.is_voice_cloned and "ref_audio_bytes" in st.session_state:
-        st.success("✅ Voice cloned successfully!")
-        
-        # Phát lại âm thanh từ bộ nhớ Session State (Không bao giờ bị mất khi rerun)
-        st.audio(st.session_state.ref_audio_bytes)
-        
-        # Nút để người dùng thu âm lại từ đầu nếu muốn đổi giọng
-        if st.button("🔄 Change voice", use_container_width=True):
-            st.session_state.is_voice_cloned = False
-            del st.session_state["ref_audio_bytes"]
-            st.rerun()
-
-    else:
-
-        uploaded = st.file_uploader("Upload audio", type=["wav", "mp3", "m4a", "ogg", "flac"])
-        recorded = st.audio_input("Record audio", sample_rate=48000)
-
-        audio_file = recorded or uploaded
-
-        if audio_file is not None:
-            st.audio(audio_file)
-
-            if st.button("Send Voice" , use_container_width=True):
-                # Thêm tin nhắn của User vào lịch sử hiển thị ngay lập tức
-                # st.session_state.chat_history.append({
-                #     "role": "user", 
-                #     "text": "🎤 *Bạn vừa gửi một tin nhắn thoại...*", 
-                #     "audio": audio_file.getvalue()
-                # })
-                # --- LƯU LẠI AUDIO VÀO SESSION STATE Ở BƯỚC NÀY ---
-                st.session_state.ref_audio_bytes = audio_file.getvalue()
-                files = {
-                    "file": (
-                        getattr(audio_file, "name", "recorded.wav"),
-                        audio_file.getvalue(),
-                        getattr(audio_file, "type", "audio/wav"),
-                    )
-                }
-                # Vừa hiện hiệu ứng xoay xoay vừa gọi API
-                with st.spinner("Thinking..."):
-                    try:
-                        r = requests.post(f"{BACKEND_URL}/v1/v2v", files=files, timeout=60)
-                        r.raise_for_status()
-                        response_data = r.json()
-                        
-                        # --- PHẦN QUAN TRỌNG: Bóc tách dữ liệu từ Backend ---
-                        # Giả định backend của bạn trả về JSON có dạng: 
-                        # {"text": "Câu trả lời của AI", "audio_base64": "UklGRiQAAABXQVZFZm10IBAA..."}
-                        
-                        ai_text = response_data.get("text", "AI không có câu trả lời bằng chữ.")
-                        ai_audio_b64 = response_data.get("audio_base64", "")
-                        
-                        # Giải mã Base64 thành byte âm thanh để Streamlit đọc được
-                        ai_audio_bytes = base64.b64decode(ai_audio_b64) if ai_audio_b64 else None
-                        
-                        # # # Lưu câu trả lời của AI vào bộ nhớ
-                        # st.session_state.chat_history.append({
-                        #     "role": "assistant",
-                        #     "text": ai_text,
-                        #     "audio": ai_audio_bytes
-                        # })
-                        # Giả lập backend mất 2 giây để clone
-                        
-                        # Thành công -> Mở khóa mic bên cột 2
-                        st.session_state.is_voice_cloned = True
-                        st.success("Voice cloned successfully! You can start chatting in the next column.")
-                        st.rerun() # Load lại trang để mic bên col2 hết bị mờ
-                    except Exception as e:
-                        st.error(f"Error connecting or processing: {str(e)}")
