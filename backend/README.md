@@ -1,25 +1,36 @@
-## Backend (Voice-to-Voice)
+# Voice-to-Voice Backend
 
-Nơi đặt API + pipeline xử lý Voice-to-Voice (STT → LLM → TTS) và/hoặc streaming audio realtime.
+This is the backend service for the Voice-to-Voice project, built with [FastAPI](https://fastapi.tiangolo.com/). It handles audio processing and connects to various AI models to provide STT, LLM, and TTS capabilities.
 
-### Thư mục
+## Architecture
 
-- `app/api/`: endpoint REST/WebSocket
-- `app/services/`: `stt`, `tts`, `llm`, `audio_io`, `streaming`
-- `app/core/`: config/settings
+The backend exposes a REST API to accept audio files and handles the processing via a pipeline:
+1. **STT (Speech-to-Text):** Processed via Groq (`whisper-large-v3-turbo`).
+2. **LLM (Large Language Model):** Powered by OpenAI (`gpt-4o-mini`) to generate conversational responses.
+3. **TTS (Text-to-Speech):** F5-TTS via Replicate API for high fidelity and fast voice cloning generation.
 
-### Chạy backend
+## Project Structure
+- `app/api/`: API Routers (`/v2v` endpoint handling file uploads).
+- `app/core/`: Configuration settings for API Keys and variables via `pydantic-settings`.
+- `app/services/`: Integration of specific services (`Groq`, `OpenAI`, `Replicate`, and `v2v_pipeline`).
 
-Tại thư mục `backend/`:
+## Prerequisites
+- Python 3.9+
+- Provide the following exact API variables in an `.env` file mapping:
+  - `GROQ_API_KEY`
+  - `OPENAI_API_KEY`
+  - `REPLICATE_API_TOKEN`
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-fastapi run .\backend\app\main.py
-```
+## Setup & Running
 
-Test nhanh:
+1. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-- `GET /health`
-- `POST /v1/v2v` (form-data key `file`)
+2. **Run the server:**
+   Start the FastAPI development server:
+   ```bash
+   fastapi dev app/main.py
+   ```
+   *The server runs on http://127.0.0.1:8000.*
