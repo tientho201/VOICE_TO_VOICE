@@ -31,3 +31,5 @@ uploads/
 *.docx
 
 get_started.py
+
+temp_data/
