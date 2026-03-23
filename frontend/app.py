@@ -10,7 +10,7 @@ from src.lib import tracking_model
 
 st.set_page_config(page_title="Chatbot", page_icon=":robot:", layout="wide")
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 # CSS Tùy chỉnh để làm đẹp Sidebar giống ChatGPT
 st.markdown("""
@@ -52,7 +52,8 @@ if "chats" not in st.session_state:
             "ref_text": tracking_model.create_text_random_voice(),
             "is_voice_cloned": False,
             "mic_key": str(uuid.uuid4()),
-            "is_send_voice": False
+            "ref_audio_path": None,
+            "ref_text_path": None
         }
     }
     st.session_state.active_session = first_id
@@ -85,7 +86,8 @@ with st.sidebar:
             "ref_text": tracking_model.create_text_random_voice(),
             "is_voice_cloned": False,
             "mic_key": str(uuid.uuid4()),
-            "is_send_voice": False
+            "ref_audio_path": None,
+            "ref_text_path": None
         }
         st.session_state.active_session = new_id
         st.rerun()  # Load lại trang
@@ -164,7 +166,10 @@ with col1:
             st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = False
             del st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"]
             del st.session_state.chats[st.session_state.active_session]["ref_text"]
+            del st.session_state.chats[st.session_state.active_session]["ref_audio_path"]
+            del st.session_state.chats[st.session_state.active_session]["ref_text_path"]
             st.session_state.chats[st.session_state.active_session]["ref_text"] = tracking_model.create_text_random_voice()
+            st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = False
             st.rerun()
 
     else:
@@ -179,12 +184,38 @@ with col1:
             # st.audio(audio_file)
             if st.button("Send Voice" , use_container_width=True):
                 st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"] = audio_file.getvalue()
+                files = {
+                    "audio_file": (audio_file.name,   st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"], audio_file.type),
+                }
+                    
+                data = {
+                    "session_id": st.session_state.chats[st.session_state.active_session]["mic_key"],
+                    "ref_text": st.session_state.chats[st.session_state.active_session]["ref_text"] if  recorded else None
+                }
+                    
+                try:
+                        
+                    r = requests.post(f"{BACKEND_URL}/setup_voice", files=files, data=data, timeout=20)
+                    r.raise_for_status()
+                    res = r.json()
+                        
+                    if not res.get("success"):
+                        st.error(f"Thất bại: {res.get('error')}")
+                    else:
+                        st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = True
+                        st.session_state.chats[st.session_state.active_session]["ref_audio_path"] = res.get("ref_audio_path")
+                        st.session_state.chats[st.session_state.active_session]["ref_text_path"] = res.get("ref_text_path")
+                        st.session_state.chats[st.session_state.active_session]["ref_text"] = res.get("ref_text")
+                        # Thành công -> Mở khóa mic bên cột 2
+                        st.success("Voice cloned successfully! You can start chatting in the next column.")
+                        # Load lại toàn bộ trang để kích hoạt Autoplay âm thanh của AI
+                        st.rerun()
+                            
+                except Exception as e:
+                    st.error(f"Backend connection error: {str(e)}")
+                    if st.button("Refresh"):
+                        st.rerun()
                 
-                # Thành công -> Mở khóa mic bên cột 2
-                st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = True
-                st.success("Voice cloned successfully! You can start chatting in the next column.")
-                st.rerun() # Load lại trang để mic bên col2 hết bị mờ
-
 
 
 with col2:
