@@ -7,19 +7,19 @@
 Backend cung cấp một REST API để tiếp nhận các file âm thanh và xử lý chúng thông qua một pipeline:
 1. **STT (Speech-to-Text):** Xử lý qua Groq (`whisper-large-v3-turbo`).
 2. **LLM (Large Language Model):** Xử lý bởi OpenAI (`gpt-4o-mini`) nhằm tạo ra các câu trả lời tự nhiên dưới dạng đàm thoại.
-3. **TTS (Text-to-Speech):** F5-TTS thông qua Replicate API với chất lượng cao và khả năng trả về giọng nói được clone (sao chép kiểu giọng) một cách nhanh chóng.
+3. **TTS (Text-to-Speech):** Xử lý bởi ElevenLabs với chất lượng cao, trả về giọng nói được clone tốc độ cực nhanh.
 
 ## Cấu trúc thư mục
 - `app/api/`: API Routers (Endpoint `/v2v` xử lý tải file lên).
 - `app/core/`: Thiết lập cấu hình cho các cấu hình API và biến môi trường thông qua `pydantic-settings`.
-- `app/services/`: Tích hợp các dịch vụ cụ thể (`Groq`, `OpenAI`, `Replicate`, và `v2v_pipeline`).
+- `app/services/`: Tích hợp các dịch vụ cụ thể (`Groq`, `OpenAI`, `ElevenLabs`, và `v2v_pipeline`).
 
 ## Yêu cầu thiết yếu
 - Python 3.9+
 - Cung cấp các cấu hình API xác thực vào file `.env` theo biến:
   - `GROQ_API_KEY`
   - `OPENAI_API_KEY`
-  - `REPLICATE_API_TOKEN`
+  - `ELEVENLABS_API_KEY`
 
 ## Cài đặt & Khởi chạy
 

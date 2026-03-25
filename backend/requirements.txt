@@ -4,6 +4,6 @@ pydantic
 pydantic-settings
 python-dotenv
 groq
-replicate
+elevenlabs
 requests
 openai
