@@ -11,6 +11,7 @@ import json
 from app.core.config import settings
 from app.services.v2v_pipeline import v2v_pipeline
 from app.services.stt import stt_service
+from app.services.tts import tts_service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,15 +23,17 @@ class V2VResponse(BaseModel):
     user_text: str          # Văn bản mà Hệ thống STT nhận lại từ giọng nói Người dùng
     bot_text: str           # Văn bản Câu trả lời của Bộ não LLM
     bot_audio: bytes        # Audio file đã được encode base64
+    error: str
 
 @router.get("/health")
 async def health_check():
-    return {"status": "ok", "message": "Backend API is up and running."}
+    return {"status": "ok"}
 
 async def handle_ref_audio(
     session_id : str | None = None, 
     audio_data: bytes | None = None,
-    ref_text: str | None = None
+    ref_text: str | None = None,
+    ext: str | None = None
 ) -> tuple[str | None, str | None]:
     """
     Xử lý file reference audio nếu có.
@@ -43,7 +46,8 @@ async def handle_ref_audio(
     try:
         temp_dir = settings.temp_audio_dir
         os.makedirs(temp_dir, exist_ok=True)
-        temp_ref_audio_path = os.path.join(temp_dir, f"ref_{session_id}.wav")
+
+        temp_ref_audio_path = os.path.join(temp_dir, f"ref_{session_id}.{ext}")
         temp_ref_text_path = os.path.join(temp_dir, f"ref_{session_id}.txt")
         with open(temp_ref_audio_path, "wb") as f:
             f.write(audio_data)
@@ -98,14 +102,18 @@ async def chat(
             audio_bytes=audio_data,
             ref_audio_path=ref_audio_path,
             ref_text=ref_text_content,
-            chat_history=chat_history,
+            chat_history=history_list,
             audio_filename=audio_file.filename
         )
         
         if not result.get("success"):
             return {
                 "success": False,
-                "error": result.get("error")
+                "error": result.get("error"),
+                "user_audio": "",
+                "user_text": "",
+                "bot_text": "",
+                "bot_audio": ""
             }
         audio_base64 = base64.b64encode(result["bot_audio_bytes"]).decode("utf-8")
         return V2VResponse(
@@ -113,13 +121,18 @@ async def chat(
             user_audio = base64.b64encode(audio_data).decode("utf-8"),
             user_text=result["user_text"],
             bot_text=result["bot_text"],
-            bot_audio=audio_base64
+            bot_audio=audio_base64,
+            error=""
         )
     except Exception as e:
         logger.error(f"Lỗi xử lý pipeline: {str(e)}")
         return {
             "success": False,
-            "error": str(e)
+            "error": str(e),
+            "user_audio": "",
+            "user_text": "",
+            "bot_text": "",
+            "bot_audio": ""
         }
 
 @router.post("/setup_voice")
@@ -153,12 +166,46 @@ async def setup_voice(
             "success": False,
             "error": "Audio file is empty."
         }
-        
-    temp_ref_audio_path, temp_ref_text_path = await handle_ref_audio(session_id, audio_data, ref_text)
+    original_filename = audio_file.filename or "audio.wav"
+    ext = original_filename.split(".")[-1] # Lấy đuôi file
+    ref_audio_path, ref_text_path = await handle_ref_audio(session_id, audio_data, ref_text, ext)
+    # 2. Upload lên ElevenLabs lấy Voice ID
+    voice_id = await tts_service.clone_voice(session_id=str(session_id), file_path=ref_audio_path)
     return {
         "success": True,
-        "temp_ref_audio_path": temp_ref_audio_path,
-        "temp_ref_text_path": temp_ref_text_path,
+        "ref_audio_path": voice_id,
+        "ref_text_path": ref_text_path,
         "ref_text": ref_text,
         "error": None
     }
+
+@router.post("/stt_user")
+async def stt_user(
+    audio_file: UploadFile = File(...),
+):
+    """
+    Người dùng sẽ gửi file audio để chuyển từ audio sang text
+    Trả về text tương ứng với file audio
+    Args:
+        audio_file: File audio của người dùng
+    Returns:
+        dict: Dictionary chứa text tương ứng với file audio
+    """
+    logger.info(f"Received audio file for streaming: {audio_file.filename}, type: {audio_file.content_type}")
+    
+    audio_data = await audio_file.read()
+    logger.info(f" Bắt đầu xử lý STT...")
+    ref_text = await stt_service.transcribe(audio_bytes=audio_data, audio_filename=audio_file.filename)
+    logger.info(f" Kết quả STT: {ref_text}")
+    if not audio_data or len(audio_data) == 0:
+        return{
+            "success": False,
+            "error": "Audio file is empty."
+        }
+        
+    return {
+        "success": True,
+        "user_text": ref_text,
+        "error": None
+    }
+

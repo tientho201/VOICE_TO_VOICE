@@ -30,18 +30,16 @@ class V2VPipeline:
 
             # BƯỚC 2: LLM (Lưu ý: Sau này cần truyền thêm history vào đây)
             logger.info(f" Bắt đầu xử lý LLM...")
-            bot_text = await llm_service.generate_response(user_text , chat_history)
+            bot_text , chat_history = llm_service.generate_response(user_text , chat_history)
             logger.info(f" Kết quả LLM: {bot_text}")
 
             # BƯỚC 3: TTS
-            logger.info(f" Bắt đầu xử lý TTS với F5-TTS...")
-            logger.info(f" ref_audio_path: {ref_audio_path}")
-            logger.info(f" ref_text: {ref_text}")
-            bot_audio_bytes = await asyncio.to_thread(
-                tts_service.generate_speech,
+            logger.info("Bắt đầu xử lý TTS với ElevenLabs...")
+            
+            # Cái biến ref_audio_path lúc này chứa chuỗi ID (ví dụ: "pNInz6obbfdqIeY...")
+            bot_audio_bytes = await tts_service.generate_speech(
                 gen_text=bot_text,
-                ref_audio_path=ref_audio_path,
-                ref_text=ref_text
+                voice_id=ref_audio_path 
             )
 
             return {

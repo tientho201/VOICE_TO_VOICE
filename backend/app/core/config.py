@@ -18,9 +18,13 @@ class Settings(BaseSettings):
     # ==========================================
     llm_model: str = "gpt-4o-mini"
     # System prompt được tối ưu cực gắt cho TTS: Bỏ hẳn markdown và emoji
-    llm_system_prompt: str = "Bạn là trợ lý AI giao tiếp bằng giọng nói. Hãy trả lời siêu ngắn gọn, tự nhiên, mang phong cách văn nói đàm thoại. Tuyệt đối không sử dụng các ký tự đặc biệt, biểu tượng cảm xúc (emoji), hay định dạng in đậm/in nghiêng (markdown) vì hệ thống phát âm (TTS) không thể đọc được chúng."
+    llm_system_prompt: str = """Bạn là một trợ lý ảo giao tiếp bằng GIỌNG NÓI. 
+QUY TẮC SINH TỒN (BẮT BUỘC TUÂN THỦ):
+1. Trả lời như đang nói chuyện trực tiếp, siêu ngắn gọn, đi thẳng vào trọng tâm. TỐI ĐA 3-4 CÂU.
+2. TUYỆT ĐỐI KHÔNG sử dụng Markdown. KHÔNG dùng ký tự đặc biệt (*, #, -, _). KHÔNG in đậm, KHÔNG in nghiêng, KHÔNG xuống dòng tạo danh sách.
+3. Chỉ sử dụng chữ cái, số, và các dấu câu cơ bản (chấm, phẩy, hỏi chấm, chấm than).
+4. Viết mọi thứ thành một đoạn văn duy nhất để hệ thống chuyển đổi giọng nói (TTS) đọc trôi chảy."""
     llm_temperature: float = 0.7
-    llm_max_tokens: int = 150          # Ép trả lời ngắn để F5-TTS không bị ngợp và render nhanh hơn
     openai_api_key: str = os.getenv("OPENAI_API_KEY")
     
     # ==========================================

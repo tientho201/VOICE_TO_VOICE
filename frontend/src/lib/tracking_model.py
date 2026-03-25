@@ -1,6 +1,6 @@
 import os 
 from dotenv import load_dotenv , find_dotenv
-from langsmith.wrappers import wrap_openai
+from langsmith.wrappers import wrap_openai 
 from openai import OpenAI
 _ = load_dotenv(find_dotenv())
 

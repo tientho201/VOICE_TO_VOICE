@@ -24,8 +24,7 @@ class LLMService:
         response = self.client.chat.completions.create(
             model=settings.llm_model,
             messages=chat_history,
-            temperature=settings.llm_temperature,
-            max_tokens=settings.llm_max_tokens
+            temperature=settings.llm_temperature
         )
         
         ai_text = response.choices[0].message.content
