@@ -10,7 +10,7 @@ from src.lib import tracking_model
 
 st.set_page_config(page_title="Chatbot", page_icon=":robot:", layout="wide")
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://voice-to-voice.onrender.com")
 
 # CSS Tùy chỉnh để làm đẹp Sidebar giống ChatGPT
 st.markdown("""
