@@ -5,6 +5,7 @@ Chào mừng đến với dự án **Voice-to-Voice**! Kho lưu trữ này chứ
 Kiến trúc phần mềm được phân chia rõ bao gồm một **Backend** (FastAPI) chuyên trách việc xử lý mọi tác vụ AI, và một **Frontend** (Streamlit) chuyên phục vụ giao diện trò chuyện bằng giọng nói mượt mà, thân thiện với người dùng.
 
 ## 🚀 Các tính năng nổi bật
+
 - 🎙️ **Ghi âm trực tiếp theo thời gian thực:** Giao diện tương tác cho phép người dùng ghi âm trực tiếp ngay từ trình duyệt.
 - 🗣️ **Sao chép giọng nói trực tiếp:** Yêu cầu người dùng đọc một đoạn văn bản được tạo ra ngẫu nhiên, sau đó lấy bản thu nhằm biến nó thành cơ sở nhân bản ra cùng phong cách chất giọng cho câu trả lời của AI!
 - ⚡ **Quy trình xử lý âm thanh tốc độ cao:**
@@ -15,7 +16,7 @@ Kiến trúc phần mềm được phân chia rõ bao gồm một **Backend** (F
 
 ## 📁 Cấu trúc lưu trữ
 
-- **`backend/`**: FastAPI Server. Chứa `v2v_pipeline` nhằm xâu chuỗi logic các bước STT, LLM và TTS lại với nhau. Cung cấp API endpoint (`/v2v`) cho các thao tác tải lên và xử lý phân giải định dạng tệp tin âm thanh. 
+- **`backend/`**: FastAPI Server. Chứa `v2v_pipeline` nhằm xâu chuỗi logic các bước STT, LLM và TTS lại với nhau. Cung cấp API endpoint (`/v2v`) cho các thao tác tải lên và xử lý phân giải định dạng tệp tin âm thanh.
 - **`frontend/`**: Giao diện UI Web ứng dụng Streamlit. Có chức năng quản lý lịch sử trò chuyện, điều khiển các module microphone, tạo giao diện dàn bố cục linh động và giúp người sử dụng giao tiếp gián tiếp qua backend.
 - **`temp_data/`**: Các thư mục sẽ tự động xuất hiện để giúp hỗ trợ các APIs trong việc giữ lại biên mục tạm thời các files `.wav` trung gian đảm bảo vòng đời request xử lý được chuẩn xác và an toàn.
 
@@ -25,11 +26,13 @@ Kiến trúc phần mềm được phân chia rõ bao gồm một **Backend** (F
 
 Hãy đảm bảo máy chạy của bạn có thiết lập Python 3.9+ trở lên.
 Nghiêm túc tạo trước và cung cấp các mã Token xác thực API Access Keys bảo mật từ các nền tảng:
+
 - [Groq](https://console.groq.com) dành cho dịch vụ STT.
 - [OpenAI](https://platform.openai.com) dành cho dịch vụ LLM trợ lý & tự động tạo text cho prompt Frontend.
 - [ElevenLabs](https://elevenlabs.io/) dành cho dịch vụ tạo giọng âm và clone giọng.
 
 **Cấu hình biến môi trường `.env`**: Hãy khai báo một file `.env` ở thư mục gốc căn nguyên của project (hầu hết backend và frontend sẽ trỏ file tại khu này):
+
 ```env
 # AI Models Keys
 GROQ_API_KEY=your_groq_key
@@ -46,19 +49,23 @@ LANGCHAIN_PROJECT=RANDOM_TEXT_VOICE_CLONING
 ### 2. Khởi chạy Backend
 
 Sau đó, truy cập bằng cửa sổ giao diện dòng lệnh terminal, đi vào folder `backend` và chạy trực tiếp cài đặt sau:
+
 ```bash
 cd backend
 pip install -r requirements.txt
 fastapi dev app/main.py
 ```
-*Backend sẽ đi vào hoạt động ở đường dẫn `http://127.0.0.1:8000`*
+
+_Backend sẽ đi vào hoạt động ở đường dẫn `http://127.0.0.1:8000`_
 
 ### 3. Khởi chạy Frontend
 
 Vẫn trên góc độ thư mục gốc, gọi thêm dòng lệnh terminal command thứ 2, chọn vào thẳng directory `frontend`:
+
 ```bash
 cd frontend
 pip install -r requirements.txt
 streamlit run app.py
 ```
-*Trình duyệt web UI sẽ tự động khởi động bung lên báo hiệu Giao diện đã tương tác được qua địa chỉ `http://localhost:8501`.*
+
+_Trình duyệt web UI sẽ tự động khởi động bung lên báo hiệu Giao diện đã tương tác được qua địa chỉ `http://localhost:8501`._
