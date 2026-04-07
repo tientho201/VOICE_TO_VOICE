@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class V2VPipeline:
-    async def process_audio(self, audio_bytes: bytes, ref_audio_path: str = None, ref_text: str = None, chat_history: list = None, audio_filename: str = "") -> dict:
+    async def process_audio(self, audio_bytes: bytes, ref_audio_path: str = None, ref_text: str = None, chat_history: list = None, audio_filename: str = "" , language = "vi", pre_transcribed_text: str = None) -> dict:
         """
         Thực thi luồng V2V an toàn với Concurrency.
         Nếu ref_audio_path và ref_text được truyền vào (từ bước Setup UI), sẽ dùng nó để clone.
@@ -21,16 +21,20 @@ class V2VPipeline:
         try:
 
             # BƯỚC 1: STT
-            logger.info(f" Bắt đầu xử lý STT...")
-            user_text = await stt_service.transcribe(audio_bytes=audio_bytes, audio_filename=audio_filename)
-            logger.info(f" Kết quả STT: {user_text}")
+            if pre_transcribed_text:
+                logger.info(f" Bỏ qua STT do đã nhận được text từ FE: {pre_transcribed_text}")
+                user_text = pre_transcribed_text
+            else:
+                logger.info(f" Bắt đầu xử lý STT...")
+                user_text = await stt_service.transcribe(audio_bytes=audio_bytes, audio_filename=audio_filename , language=language)
+                logger.info(f" Kết quả STT: {user_text}")
 
             if not user_text:
                 raise ValueError("Không nhận diện được giọng nói.")
 
             # BƯỚC 2: LLM (Lưu ý: Sau này cần truyền thêm history vào đây)
             logger.info(f" Bắt đầu xử lý LLM...")
-            bot_text , chat_history = llm_service.generate_response(user_text , chat_history)
+            bot_text , chat_history = llm_service.generate_response(user_text , chat_history , language)
             logger.info(f" Kết quả LLM: {bot_text}")
 
             # BƯỚC 3: TTS

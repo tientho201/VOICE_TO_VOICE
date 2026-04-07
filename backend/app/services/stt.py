@@ -21,6 +21,7 @@ class STTService:
             response = self.client.audio.transcriptions.create(
                 model=settings.model,
                 file=file_upload,
+                language=language,
                 response_format="text", # Lấy thẳng chuỗi text cho lẹ, không cần JSON rườm rà
                 temperature=settings.temperature  # Optional
             )
