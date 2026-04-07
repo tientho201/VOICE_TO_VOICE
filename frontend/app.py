@@ -8,13 +8,40 @@ import json
 from src.lib import tracking_model
 
 
-st.set_page_config(page_title="Chatbot", page_icon=":robot:", layout="wide")
+st.set_page_config(page_title="Chatbot", page_icon=":robot:", layout="wide" , initial_sidebar_state="collapsed")
 
 BACKEND_URL = os.getenv("BACKEND_URL", "https://voice-to-voice.onrender.com")
 
 # CSS Tùy chỉnh để làm đẹp Sidebar giống ChatGPT
 st.markdown("""
 <style>
+    /* 1. Màn hình PC lớn (24 inch trở lên, ngang > 1600px): Giữ nguyên 100% */
+    @media screen and (min-width: 1600px) {
+        html { zoom: 1.0; }
+    }
+
+    /* 2. Màn hình Laptop trung bình (14 - 16.5 inch): Ép thu nhỏ xuống 85% */
+    @media screen and (max-width: 1599px) and (min-width: 1025px) {
+        html { zoom: 0.85; }
+    }
+
+    /* 3. Màn hình nhỏ, Tablet, Mobile (Dưới 14 inch): Ép thu nhỏ xuống 75% */
+    @media screen and (max-width: 1024px) {
+        html { zoom: 0.75; }
+    }
+    
+    /* Ép khung nội dung dàn đều, cắt bỏ khoảng trắng thừa ở 2 bên và trên dưới */
+    .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+        max-width: 98% !important; 
+    }
+    
+    /* Thu gọn chiều cao của thanh phát âm thanh */
+    audio {
+        width: 100% !important;
+        height: 45px !important;
+    }
     .stButton>button {
         width: 100%;
         border-radius: 5px;
@@ -35,6 +62,13 @@ st.markdown("""
     /*}*/
 </style>
 """, unsafe_allow_html=True)
+# label = r'''
+#     $\textsf{
+#     \Huge Text \huge Text \LARGE Text \Large Text 
+#     \large Text \normalsize Text \small Text 
+#     \footnotesize Text \scriptsize Text \tiny Text 
+#     }$
+# '''
 
 # Khởi tạo state
 if "chat_counter" not in st.session_state:
@@ -160,7 +194,7 @@ col1, col2 = st.columns([1, 1], gap="xlarge")
 #===============================================
 
 with col1:
-    st.subheader("Upload or Record audio")
+    st.title("Upload or Record audio")
 
     # KỊCH BẢN A: ĐÃ CLONE XONG -> Chỉ hiện file audio đã lưu và nút Reset
     if st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] and "ref_audio_bytes" in st.session_state.chats[st.session_state.active_session]:
@@ -168,8 +202,9 @@ with col1:
         
         # Phát lại âm thanh từ bộ nhớ Session State (Không bao giờ bị mất khi rerun)
         st.audio(st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"])
-        with st.status("Hãy nói theo nội dung bên dưới để clone giọng nói của bạn"):
-            st.write(st.session_state.chats[st.session_state.active_session]["ref_text"])
+        with st.container(border=True):
+            st.subheader("Nội dung để clone giọng nói" , divider="gray" )
+            st.write(st.session_state.chats[st.session_state.active_session]["ref_text"] , )
         # Nút để người dùng thu âm lại từ đầu nếu muốn đổi giọng
         if st.button("🔄 Change voice", use_container_width=True):
             st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = False
@@ -182,13 +217,14 @@ with col1:
             st.rerun()
 
     else:
-
-        uploaded = st.file_uploader("Upload audio", type=["wav", "mp3", "m4a", "ogg", "flac"] , )
-        recorded = st.audio_input("Record audio", sample_rate=48000)
+        st.subheader("Upload audio")
+        uploaded = st.file_uploader("Upload audio", type=["wav", "mp3", "m4a", "ogg", "flac"] , label_visibility= "collapsed")
+        st.subheader("Record audio")
+        recorded = st.audio_input("Record audio", sample_rate=48000 , label_visibility= "collapsed")
         audio_file = recorded or uploaded
-
-        with st.status("Hãy nói theo nội dung bên dưới để clone giọng nói của bạn"):
-            st.write(st.session_state.chats[st.session_state.active_session]["ref_text"])
+        with st.container(border=True):
+            st.subheader("Hãy nói theo nội dung bên dưới để clone giọng nói của bạn" , divider="gray" )
+            st.write(st.session_state.chats[st.session_state.active_session]["ref_text"] , )
         if audio_file is not None:
             if st.button("Send Voice" , use_container_width=True):
                 st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"] = audio_file.getvalue()
