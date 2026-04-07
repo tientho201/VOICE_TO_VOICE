@@ -1,0 +1,46 @@
+name: CI/CD Docker Build and Publish
+
+# Kích hoạt luồng này khi có code mới đẩy lên nhánh main
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Kéo code từ repo GitHub về máy chủ ảo của GitHub Actions
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Cài đặt Docker Buildx (Công cụ build image tốc độ cao)
+      - name: 🛠️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3. Đăng nhập vào Docker Hub bằng Secret
+      - name: 🔑 Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 4. Đóng gói và đẩy ảnh Backend lên Docker Hub
+      - name: 🐳 Build and push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend # Trỏ vào thư mục backend chứa Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/voice_to_voice-backend:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/voice_to_voice-backend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/voice_to_voice-backend:buildcache,mode=max
+
+      # 5. Đóng gói và đẩy ảnh Frontend lên Docker Hub
+      - name: 🐳 Build and push Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend # Trỏ vào thư mục frontend chứa Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/voice_to_voice-frontend:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/voice_to_voice-frontend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/voice_to_voice-frontend:buildcache,mode=max
