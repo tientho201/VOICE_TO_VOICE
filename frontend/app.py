@@ -25,12 +25,12 @@ st.markdown("""
 
     /* 2. Màn hình Laptop trung bình (14 - 16.5 inch): Ép thu nhỏ xuống 85% */
     @media screen and (max-width: 1599px) and (min-width: 1025px) {
-        html {  font-size: 0.8rem; }
+        html { zoom: 0.85;  font-size: 0.8rem; }
     }
 
     /* 3. Màn hình nhỏ, Tablet, Mobile (Dưới 14 inch): Ép thu nhỏ xuống 75% */
     @media screen and (max-width: 1024px) {
-        html { font-size: 0.8rem; }
+        html { zoom: 0.75; font-size: 0.8rem; }
     }
     
     /* Ép khung nội dung dàn đều, cắt bỏ khoảng trắng thừa ở 2 bên và trên dưới */
@@ -200,6 +200,7 @@ col1, col2 = st.columns([1, 1], gap="xlarge")
 
 with col1:
     st.title("Upload or Record audio" , anchor=False)
+    st.warning("Lưu ý: Nên chọn ngôn ngữ trùng với ngôn ngữ trong file audio")
     st.divider()
     st.subheader("Chọn ngôn ngữ bạn muốn nói:")
     
