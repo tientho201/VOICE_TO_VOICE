@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class V2VPipeline:
-    async def process_audio(self, audio_bytes: bytes, ref_audio_path: str = None, ref_text: str = None, chat_history: list = None, audio_filename: str = "" , language = "vi", pre_transcribed_text: str = None) -> dict:
+    async def process_audio(self, audio_bytes: bytes, ref_audio_path: str = None, ref_text: str = None, chat_history: list = None, audio_filename: str = "" , language: str = "vi", pre_transcribed_text: str = None) -> dict:
         """
         Thực thi luồng V2V an toàn với Concurrency.
         Nếu ref_audio_path và ref_text được truyền vào (từ bước Setup UI), sẽ dùng nó để clone.

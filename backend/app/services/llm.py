@@ -9,7 +9,7 @@ class LLMService:
         print("🧠 Đang khởi tạo LLM Service...")
         self.client = get_client()
 
-    def generate_response(self, user_text: str, chat_history: list , language: str = "vi") -> tuple[str, list]:
+    def generate_response(self, user_text: str, chat_history: list , language: str) -> tuple[str, list]:
         """
         Nhận câu hỏi và lịch sử cũ. Trả về câu trả lời và lịch sử mới.
         """
