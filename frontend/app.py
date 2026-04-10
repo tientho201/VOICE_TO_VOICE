@@ -1,5 +1,5 @@
 import os
-import time
+
 import requests
 import streamlit as st
 import uuid
@@ -7,9 +7,6 @@ import base64
 import json
 from src.lib import tracking_model
 
-from dotenv import load_dotenv, find_dotenv
-
-load_dotenv(find_dotenv())
 
 st.set_page_config(page_title="Chatbot", page_icon=":robot:", layout="wide" , initial_sidebar_state="collapsed")
 
@@ -25,12 +22,12 @@ st.markdown("""
 
     /* 2. Màn hình Laptop trung bình (14 - 16.5 inch): Ép thu nhỏ xuống 85% */
     @media screen and (max-width: 1599px) and (min-width: 1025px) {
-        html { zoom: 0.85;  font-size: 0.8rem; }
+        html { zoom: 0.85; }
     }
 
     /* 3. Màn hình nhỏ, Tablet, Mobile (Dưới 14 inch): Ép thu nhỏ xuống 75% */
     @media screen and (max-width: 1024px) {
-        html { zoom: 0.75; font-size: 0.8rem; }
+        html { zoom: 0.75; }
     }
     
     /* Ép khung nội dung dàn đều, cắt bỏ khoảng trắng thừa ở 2 bên và trên dưới */
@@ -72,14 +69,6 @@ st.markdown("""
 #     \footnotesize Text \scriptsize Text \tiny Text 
 #     }$
 # '''
-try:
-    r_health = requests.get(f"{BACKEND_URL}/health")
-    r_health.raise_for_status()
-    res = r_health.json()
-except Exception:
-    st.error("❌ Backend is not running!")
-    time.sleep(2)
-    st.rerun()
 
 # Khởi tạo state
 if "chat_counter" not in st.session_state:
@@ -92,14 +81,13 @@ if "chats" not in st.session_state:
         first_id: {
             "name": "New Chat",
             "chat_history": [],
-            "ref_audio_bytes": b"",
+            "ref_audio_bytes": None,
             "chat_number": st.session_state.chat_counter,
-            "ref_text": tracking_model.create_text_random_voice("vi"),
+            "ref_text": tracking_model.create_text_random_voice(),
             "is_voice_cloned": False,
             "mic_key": str(uuid.uuid4()),
             "ref_audio_path": None,
-            "ref_text_path": None,
-            "language": "vi"
+            "ref_text_path": None
         }
     }
     st.session_state.active_session = first_id
@@ -127,14 +115,13 @@ with st.sidebar:
         st.session_state.chats[new_id] = {
             "name": "New Chat",
             "chat_history": [],
-            "ref_audio_bytes": b"",
+            "ref_audio_bytes": None,
             "chat_number": st.session_state.chat_counter,
-            "ref_text": tracking_model.create_text_random_voice("vi"),
+            "ref_text": tracking_model.create_text_random_voice(),
             "is_voice_cloned": False,
             "mic_key": str(uuid.uuid4()),
             "ref_audio_path": None,
-            "ref_text_path": None,
-            "language": "vi"
+            "ref_text_path": None
         }
         st.session_state.active_session = new_id
         st.rerun()  # Load lại trang
@@ -190,8 +177,16 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
-
-        
+    try:
+        r_health = requests.get(f"{BACKEND_URL}/health")
+        r_health.raise_for_status()
+        res = r_health.json()
+        if res["status"] == "ok":
+            st.success("✅ Backend is running!")
+    except Exception as e:
+        st.error("❌ Backend is not running!")
+        st.rerun()
+    
 col1, col2 = st.columns([1, 1], gap="xlarge")
 
 #===============================================
@@ -199,43 +194,10 @@ col1, col2 = st.columns([1, 1], gap="xlarge")
 #===============================================
 
 with col1:
-    st.title("Upload or Record audio" , anchor=False)
-    st.warning("Lưu ý: Nên chọn ngôn ngữ trùng với ngôn ngữ trong file audio")
-    st.divider()
-    st.subheader("Chọn ngôn ngữ bạn muốn nói:")
-    
-    _lang_options = ["vi", "zh", "en"]
-    active_chat = st.session_state.chats[st.session_state.active_session]
-
-    # Nguồn sự thật duy nhất: active_chat["language"]
-    # Dùng index= thay vì key= để tránh hoàn toàn vấn đề widget-managed state
-    # và on_change bị fire giả tạo khi có chuỗi rerun liên tiếp (ví dụ: lần 2 chat)
-    _stored_lang = active_chat.get("language", "vi")
-    _lang_index = _lang_options.index(_stored_lang) if _stored_lang in _lang_options else 0
-
-    selected_lang = st.selectbox(
-        "Chọn ngôn ngữ bạn muốn nói:",
-        options=_lang_options,
-        index=_lang_index,
-        format_func=lambda x: {"vi": "vi Tiếng Việt", "zh": "zh Tiếng Trung", "en": "en Tiếng Anh"}[x],
-        label_visibility="collapsed",
-        disabled=st.session_state.chats[st.session_state.active_session]["is_voice_cloned"]
-    )
-
-    # Chỉ cập nhật khi user THỰC SỰ đổi ngôn ngữ.
-    # Cần st.rerun() để widget re-render từ index đúng, tránh bị stale
-    # khi user đổi ngôn ngữ nhiều lần liên tiếp.
-    if selected_lang != active_chat.get("language"):
-        active_chat["language"] = selected_lang
-        if not active_chat.get("is_voice_cloned", False):
-            active_chat["ref_text"] = tracking_model.create_text_random_voice(selected_lang)
-        st.rerun()
-
-    current_language = active_chat.get("language", "vi")
-
+    st.title("Upload or Record audio")
 
     # KỊCH BẢN A: ĐÃ CLONE XONG -> Chỉ hiện file audio đã lưu và nút Reset
-    if st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] and st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"]:
+    if st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] and "ref_audio_bytes" in st.session_state.chats[st.session_state.active_session]:
         st.success("✅ Voice cloned successfully!")
         
         # Phát lại âm thanh từ bộ nhớ Session State (Không bao giờ bị mất khi rerun)
@@ -245,12 +207,13 @@ with col1:
             st.write(st.session_state.chats[st.session_state.active_session]["ref_text"] , )
         # Nút để người dùng thu âm lại từ đầu nếu muốn đổi giọng
         if st.button("🔄 Change voice", use_container_width=True):
-            _sess = st.session_state.chats[st.session_state.active_session]
-            _sess["is_voice_cloned"] = False
-            _sess["ref_audio_bytes"] = b""
-            _sess["ref_audio_path"] = None
-            _sess["ref_text_path"] = None
-            _sess["ref_text"] = tracking_model.create_text_random_voice(current_language)
+            st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = False
+            del st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"]
+            del st.session_state.chats[st.session_state.active_session]["ref_text"]
+            del st.session_state.chats[st.session_state.active_session]["ref_audio_path"]
+            del st.session_state.chats[st.session_state.active_session]["ref_text_path"]
+            st.session_state.chats[st.session_state.active_session]["ref_text"] = tracking_model.create_text_random_voice()
+            st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = False
             st.rerun()
 
     else:
@@ -271,8 +234,7 @@ with col1:
                     
                 data = {
                     "session_id": st.session_state.chats[st.session_state.active_session]["mic_key"],
-                    "ref_text": st.session_state.chats[st.session_state.active_session]["ref_text"] if  recorded else None,
-                    "language": current_language
+                    "ref_text": st.session_state.chats[st.session_state.active_session]["ref_text"] if  recorded else None
                 }
                     
                 try:
@@ -361,7 +323,7 @@ with col2:
             with st.chat_message("user"):
                 try:
 
-                    r = requests.post(f"{BACKEND_URL}/stt_user", files=files , data={"language": current_language}, timeout=60)
+                    r = requests.post(f"{BACKEND_URL}/stt_user", files=files, timeout=60)
                     r.raise_for_status()
                     res = r.json()
                     if not res.get("success"):
@@ -385,18 +347,15 @@ with col2:
                     with st.spinner("AI is listening and thinking..."):
                         try:
                             clean_history = []
-                            # Gửi lịch sử cũ (bỏ qua câu user vừa nói ra) để Backend tránh bị add lặp 2 lần
-                            for msg in current_chat["chat_history"][:-1]:
+                            for msg in current_chat["chat_history"]:
                                 # Cần đổi chữ "text" thành "content" để OpenAI hiểu
                                 clean_history.append({"role": msg["role"], "content": msg["text"]})
                             data = {
                                 "ref_audio_path": st.session_state.chats[st.session_state.active_session]["ref_audio_path"] ,
                                 "ref_text_path": st.session_state.chats[st.session_state.active_session]["ref_text_path"],
-                                "chat_history": json.dumps(clean_history),
-                                "language": current_language,
-                                "user_text": user_text  # Gửi thẳng text đã STT cho Backend để khỏi STT lại
+                                "chat_history": json.dumps(clean_history)
                             }
-                            r_chat = requests.post(f"{BACKEND_URL}/chat", files=files, data=data, timeout=60)
+                            r_chat = requests.post(f"{BACKEND_URL}/chat", files=files, data=data, timeout=20)
                             r_chat.raise_for_status()
                             res_chat = r_chat.json()
                             if not res_chat.get("success"):

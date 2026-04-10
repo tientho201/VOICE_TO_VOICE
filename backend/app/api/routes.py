@@ -65,9 +65,7 @@ async def chat(
     audio_file: UploadFile = File(...),
     ref_audio_path: str | None = Form(None),
     ref_text_path: str | None = Form(None),
-    chat_history: str | None = Form(None),
-    language: str | None = Form(None),
-    user_text: str | None = Form(None)
+    chat_history: str | None = Form(None)
 ):
     """
     Endpoint chính của đồ án:
@@ -105,9 +103,7 @@ async def chat(
             ref_audio_path=ref_audio_path,
             ref_text=ref_text_content,
             chat_history=history_list,
-            audio_filename=audio_file.filename,
-            language=language,
-            pre_transcribed_text=user_text
+            audio_filename=audio_file.filename
         )
         
         if not result.get("success"):
@@ -143,8 +139,7 @@ async def chat(
 async def setup_voice(
     audio_file: UploadFile = File(...),
     session_id : str | None = Form(None),
-    ref_text: str | None = Form(None),
-    language: str | None = Form(None)
+    ref_text: str | None = Form(None)
 ):
     """
     Người dùng sẽ gửi file audio để setup giọng nói của mình
@@ -164,7 +159,7 @@ async def setup_voice(
     audio_data = await audio_file.read()
     if ref_text is None:
         logger.info(f" Bắt đầu xử lý STT...")
-        ref_text = await stt_service.transcribe(audio_bytes=audio_data, audio_filename=audio_file.filename , language=language)
+        ref_text = await stt_service.transcribe(audio_bytes=audio_data, audio_filename=audio_file.filename)
         logger.info(f" Kết quả STT: {ref_text}")
     if not audio_data or len(audio_data) == 0:
         return{
@@ -187,7 +182,6 @@ async def setup_voice(
 @router.post("/stt_user")
 async def stt_user(
     audio_file: UploadFile = File(...),
-    language: str | None = Form(None)
 ):
     """
     Người dùng sẽ gửi file audio để chuyển từ audio sang text
@@ -201,7 +195,7 @@ async def stt_user(
     
     audio_data = await audio_file.read()
     logger.info(f" Bắt đầu xử lý STT...")
-    ref_text = await stt_service.transcribe(audio_bytes=audio_data, audio_filename=audio_file.filename , language=language)
+    ref_text = await stt_service.transcribe(audio_bytes=audio_data, audio_filename=audio_file.filename)
     logger.info(f" Kết quả STT: {ref_text}")
     if not audio_data or len(audio_data) == 0:
         return{
