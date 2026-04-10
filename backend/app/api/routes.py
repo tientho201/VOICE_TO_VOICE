@@ -157,15 +157,22 @@ async def setup_voice(
     logger.info(f"Received audio file for streaming: {audio_file.filename}, type: {audio_file.content_type}")
     
     audio_data = await audio_file.read()
-    if ref_text is None:
-        logger.info(f" Bắt đầu xử lý STT...")
-        ref_text = await stt_service.transcribe(audio_bytes=audio_data, audio_filename=audio_file.filename)
-        logger.info(f" Kết quả STT: {ref_text}")
     if not audio_data or len(audio_data) == 0:
         return{
             "success": False,
             "error": "Audio file is empty."
         }
+
+    if ref_text is None:
+        try:
+            logger.info(f" Bắt đầu xử lý STT...")
+            ref_text = await stt_service.transcribe(audio_bytes=audio_data, audio_filename=audio_file.filename)
+            logger.info(f" Kết quả STT: {ref_text}")
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
     original_filename = audio_file.filename or "audio.wav"
     ext = original_filename.split(".")[-1] # Lấy đuôi file
     ref_audio_path, ref_text_path = await handle_ref_audio(session_id, audio_data, ref_text, ext)
@@ -194,13 +201,20 @@ async def stt_user(
     logger.info(f"Received audio file for streaming: {audio_file.filename}, type: {audio_file.content_type}")
     
     audio_data = await audio_file.read()
-    logger.info(f" Bắt đầu xử lý STT...")
-    ref_text = await stt_service.transcribe(audio_bytes=audio_data, audio_filename=audio_file.filename)
-    logger.info(f" Kết quả STT: {ref_text}")
     if not audio_data or len(audio_data) == 0:
         return{
             "success": False,
             "error": "Audio file is empty."
+        }
+        
+    try:
+        logger.info(f" Bắt đầu xử lý STT...")
+        ref_text = await stt_service.transcribe(audio_bytes=audio_data, audio_filename=audio_file.filename)
+        logger.info(f" Kết quả STT: {ref_text}")
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
         }
         
     return {
