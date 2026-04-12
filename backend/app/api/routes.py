@@ -169,9 +169,12 @@ async def setup_voice(
             ref_text = await stt_service.transcribe(audio_bytes=audio_data, audio_filename=audio_file.filename)
             logger.info(f" Kết quả STT: {ref_text}")
         except Exception as e:
+            from app.services.stt import STTHallucinationError
+            is_hallucination = isinstance(e, STTHallucinationError)
             return {
                 "success": False,
-                "error": str(e)
+                "error": str(e),
+                "is_hallucination": is_hallucination
             }
     original_filename = audio_file.filename or "audio.wav"
     ext = original_filename.split(".")[-1] # Lấy đuôi file

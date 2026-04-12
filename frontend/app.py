@@ -244,7 +244,12 @@ with col1:
                     res = r.json()
                         
                     if not res.get("success"):
-                        st.error(f"Thất bại: {res.get('error')}")
+                        if res.get("is_hallucination"):
+                            st.warning(f"⚠️ {res.get('error')} Vui lòng thử upload/ghi âm diễn đạt rõ hơn.")
+                            if "ref_audio_bytes" in st.session_state.chats[st.session_state.active_session]:
+                                del st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"]
+                        else:
+                            st.error(f"Thất bại: {res.get('error')}")
                     else:
                         st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = True
                         st.session_state.chats[st.session_state.active_session]["ref_audio_path"] = res.get("ref_audio_path")
