@@ -204,7 +204,7 @@ with col1:
         st.audio(st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"])
         with st.container(border=True):
             st.subheader("Nội dung để clone giọng nói" , divider="gray" )
-            st.write(st.session_state.chats[st.session_state.active_session]["ref_text"] )
+            st.write(st.session_state.chats[st.session_state.active_session].get("ref_text", ""))
         # Nút để người dùng thu âm lại từ đầu nếu muốn đổi giọng
         if st.button("🔄 Change voice", use_container_width=True):
             del st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"]

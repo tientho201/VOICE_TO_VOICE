@@ -7,7 +7,8 @@ logger = logging.getLogger(__name__)
 
 _HALLUCINATION_TOKENS = [
     "ghiền mì gõ", "đăng ký kênh", "bấm vào đây", "xem thêm video",
-    "chia sẻ video", "cảm ơn đã xem"
+    "chia sẻ video", "cảm ơn đã xem" , "subscribe", "like and subscribe", "thank you for watching", "thanks for watching",
+    "please subscribe", "don't forget to", "hit the bell", "comment below", "amara.org",
 ]
 
 class STTHallucinationError(Exception):
