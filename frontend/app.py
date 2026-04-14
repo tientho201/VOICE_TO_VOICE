@@ -15,8 +15,7 @@ parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 # ------------------------------
-from src.lib import tracking_model
-
+import src.lib.tracking_model as tracking_model
 
 st.set_page_config(page_title="Chatbot", page_icon=":robot:", layout="wide" , initial_sidebar_state="collapsed")
 
