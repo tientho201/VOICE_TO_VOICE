@@ -208,10 +208,10 @@ with col1:
             st.write(st.session_state.chats[st.session_state.active_session].get("ref_text", ""))
         # Nút để người dùng thu âm lại từ đầu nếu muốn đổi giọng
         if st.button("🔄 Change voice", use_container_width=True):
-            del st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"]
-            del st.session_state.chats[st.session_state.active_session]["ref_text"]
-            del st.session_state.chats[st.session_state.active_session]["ref_audio_path"]
-            del st.session_state.chats[st.session_state.active_session]["ref_text_path"]
+            st.session_state.chats[st.session_state.active_session].pop("ref_audio_bytes", None)
+            st.session_state.chats[st.session_state.active_session].pop("ref_text", None)
+            st.session_state.chats[st.session_state.active_session].pop("ref_audio_path", None)
+            st.session_state.chats[st.session_state.active_session].pop("ref_text_path", None)
             st.session_state.chats[st.session_state.active_session]["ref_text"] = tracking_model.create_text_random_voice()
             st.session_state.chats[st.session_state.active_session]["is_voice_cloned"] = False
             st.rerun()
@@ -224,7 +224,12 @@ with col1:
         audio_file = recorded or uploaded
         with st.container(border=True):
             st.subheader("Hãy nói theo nội dung bên dưới để clone giọng nói của bạn" , divider="gray" )
-            st.write(st.session_state.chats[st.session_state.active_session]["ref_text"])
+            
+            # Khởi tạo lại nếu bị thiếu
+            if "ref_text" not in st.session_state.chats[st.session_state.active_session]:
+                st.session_state.chats[st.session_state.active_session]["ref_text"] = tracking_model.create_text_random_voice()
+                
+            st.write(st.session_state.chats[st.session_state.active_session].get("ref_text", ""))
         if audio_file is not None:
             if st.button("Send Voice" , use_container_width=True):
                 st.session_state.chats[st.session_state.active_session]["ref_audio_bytes"] = audio_file.getvalue()
@@ -234,7 +239,7 @@ with col1:
                     
                 data = {
                     "session_id": st.session_state.chats[st.session_state.active_session]["mic_key"],
-                    "ref_text": st.session_state.chats[st.session_state.active_session]["ref_text"] if  recorded else None
+                    "ref_text": st.session_state.chats[st.session_state.active_session].get("ref_text", "") if recorded else None
                 }
                     
                 try:
