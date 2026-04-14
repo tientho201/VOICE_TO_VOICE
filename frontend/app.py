@@ -5,6 +5,16 @@ import streamlit as st
 import uuid
 import base64
 import json
+import sys
+
+# 1. Lấy đường dẫn của thư mục frontend hiện tại
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 2. Lùi ra ngoài một cấp để lấy đường dẫn thư mục gốc (voice_to_voice)
+parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
+# 3. Ép Python phải đưa thư mục gốc này vào ra-đa tìm kiếm thư viện
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+# ------------------------------
 from src.lib import tracking_model
 
 
